@@ -2,7 +2,16 @@ import nodemailer from "nodemailer"
 
 export const sendMail = async(to, subject, text) => {
     try {
-const transporter = nodemailer.createTransporter({
+        // Check if email configuration is available
+        if (!process.env.MAILTRAP_SMTP_HOST || !process.env.MAILTRAP_SMTP_USER) {
+            console.log("📧 Email configuration not found - skipping email send");
+            console.log(`Would send email to: ${to}`);
+            console.log(`Subject: ${subject}`);
+            console.log(`Message: ${text}`);
+            return { messageId: "dev-mode-skip" };
+        }
+
+const transporter = nodemailer.createTransport({
     host: process.env.MAILTRAP_SMTP_HOST,
     port: process.env.MAILTRAP_SMTP_PORT,
     secure: false,
