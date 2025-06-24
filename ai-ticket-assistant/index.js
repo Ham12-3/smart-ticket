@@ -7,6 +7,9 @@ import ticketRoutes from "./routes/ticket.js";
 import { inngest } from "./inngest/client.js";
 import { onUserSignup } from "./inngest/functions/on-signup.js";
 import { onTicketCreated } from "./inngest/functions/on-ticket-create.js";
+import { autoResolveAgent } from "./inngest/functions/auto-resolve-agent.js";
+import { proactiveFollowupAgent, satisfactionSurveyAgent } from "./inngest/functions/proactive-followup-agent.js";
+import { smartEscalationAgent } from "./inngest/functions/smart-escalation-agent.js";
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -24,7 +27,14 @@ app.use(
   "/api/inngest",
   serve({
     client: inngest,
-    functions: [onUserSignup, onTicketCreated],
+    functions: [
+      onUserSignup, 
+      onTicketCreated, 
+      autoResolveAgent, 
+      proactiveFollowupAgent, 
+      satisfactionSurveyAgent, 
+      smartEscalationAgent
+    ],
   })
 );
 

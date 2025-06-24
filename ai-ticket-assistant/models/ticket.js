@@ -15,6 +15,15 @@ const ticketSchema = new mongoose.Schema({
   helpfulNotes: String,
   relatedSkills: [String],
   createdAt: { type: Date, default: Date.now },
+  // Agentic features
+  resolvedAt: Date,
+  resolvedBy: String, // "AI_AGENT" or user ID
+  escalatedAt: Date,
+  escalationReason: String,
+  satisfactionSurveySent: { type: Boolean, default: false },
+  satisfactionRating: String,
+  autoResolutionAttempted: { type: Boolean, default: false },
+  followupSent: { type: Boolean, default: false }
 });
 
 export default mongoose.model("Ticket", ticketSchema);

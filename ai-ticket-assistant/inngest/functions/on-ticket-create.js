@@ -75,6 +75,31 @@ export const onTicketCreated = inngest.createFunction(
         }
       });
 
+      // Schedule AI auto-resolution check first
+      await step.run("schedule-auto-resolution", async () => {
+        await inngest.send({
+          name: "ticket/auto-resolve-check",
+          data: { ticketId: ticket._id.toString() }
+        });
+      });
+
+      // Schedule escalation monitoring
+      await step.run("schedule-escalation-monitoring", async () => {
+        const delayHours = ticket.priority === "high" ? 24 : ticket.priority === "medium" ? 48 : 72;
+        await inngest.send({
+          name: "ticket/monitor-escalation",
+          data: { ticketId: ticket._id.toString(), checkAfterHours: delayHours }
+        });
+      });
+
+      // Schedule follow-up after resolution
+      await step.run("schedule-followup", async () => {
+        await inngest.send({
+          name: "ticket/schedule-followup",
+          data: { ticketId: ticket._id.toString(), delayInHours: 24 }
+        });
+      });
+
       return { success: true };
     } catch (err) {
       console.error("❌ Error running the step", err.message);
