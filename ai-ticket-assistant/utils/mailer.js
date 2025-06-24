@@ -1,8 +1,8 @@
 import nodemailer from "nodemailer"
 
-export const sendMail = async(toString, subject, text) => {
+export const sendMail = async(to, subject, text) => {
     try {
-const transporter = nodemailer.createTransport({
+const transporter = nodemailer.createTransporter({
     host: process.env.MAILTRAP_SMTP_HOST,
     port: process.env.MAILTRAP_SMTP_PORT,
     secure: false,
@@ -13,8 +13,8 @@ const transporter = nodemailer.createTransport({
 })
 
 const info = await transporter.sendMail({
-    from : '"Inngest TMS',
-    to ,
+    from: '"Smart Ticket System" <noreply@smartticket.com>',
+    to,
     subject,
     text,
     

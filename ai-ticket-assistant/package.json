@@ -1,19 +1,22 @@
 {
   "name": "ai-ticket-assistant",
   "version": "1.0.0",
-  "description": "",
+  "description": "Smart AI-powered ticket management system with automatic analysis and assignment",
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "start": "node index.js",
+    "inngest-dev": "npx inngest-cli@latest dev"
   },
-  "keywords": [],
+  "keywords": ["ticket", "ai", "inngest", "support", "automation"],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "nodemon": "^3.1.10"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.21.0",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
