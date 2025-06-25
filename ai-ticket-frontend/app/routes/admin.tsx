@@ -8,6 +8,7 @@ export default function Admin() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
+  const [promotionEmail, setPromotionEmail] = useState("");
   const [stats, setStats] = useState({
     totalTickets: 0,
     todoTickets: 0,
@@ -36,8 +37,8 @@ export default function Admin() {
       const allTickets = ticketsData.tickets || [];
       setTickets(allTickets);
 
-      // Calculate stats
-      const todoCount = allTickets.filter((t: any) => t.status === 'todo').length;
+      // Calculate stats (handle both old TODO and new todo formats)
+      const todoCount = allTickets.filter((t: any) => t.status === 'TODO' || t.status === 'todo').length;
       const inProgressCount = allTickets.filter((t: any) => t.status === 'in_progress').length;
       const doneCount = allTickets.filter((t: any) => t.status === 'done').length;
 
@@ -53,6 +54,74 @@ export default function Admin() {
       console.error("Failed to fetch data:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const updateTicketStatus = async (ticketId: string, newStatus: string) => {
+    if (!token) return;
+    
+    try {
+      console.log(`Updating ticket ${ticketId} to status: ${newStatus}`);
+      
+      const res = await fetch(`${import.meta.env.VITE_SERVER_URL}/tickets/${ticketId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      const data = await res.json();
+      console.log("Update response:", data);
+
+      if (res.ok) {
+        // Show success message
+        alert(`Ticket status updated to: ${newStatus}`);
+        // Refresh the tickets list
+        fetchData();
+      } else {
+        console.error("Update failed:", data);
+        alert(data.message || "Failed to update ticket");
+      }
+    } catch (err) {
+      console.error("Failed to update ticket:", err);
+      alert("Error updating ticket");
+    }
+  };
+
+  const promoteToAdmin = async () => {
+    if (!token || !promotionEmail) return;
+    
+    try {
+      const res = await fetch(`${import.meta.env.VITE_SERVER_URL}/user/promote-admin`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ email: promotionEmail }),
+      });
+
+      const data = await res.json();
+      
+      if (res.ok) {
+        alert(data.message);
+        setPromotionEmail("");
+        if (data.isFirstAdmin) {
+          // If this was the first admin promotion, refresh the page
+          window.location.reload();
+        }
+      } else {
+        console.error("Promotion failed:", data);
+        alert(data.message || "Failed to promote user");
+        if (data.debug) {
+          console.log("Debug info:", data.debug);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to promote user:", err);
+      alert("Error promoting user");
     }
   };
 
@@ -72,6 +141,7 @@ export default function Admin() {
   const getStatusBadge = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'todo':
+      case 'TODO':
         return <span className="badge-luxury-todo">To Do</span>;
       case 'in_progress':
         return <span className="badge-luxury-progress">In Progress</span>;
@@ -198,6 +268,47 @@ export default function Admin() {
             </div>
           </div>
 
+          {/* Admin Promotion Section */}
+          <div className="luxury-glass rounded-3xl p-8 luxury-fade-in mb-8">
+            <div className="flex items-center mb-6">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center mr-4">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold luxury-heading">Admin Management</h2>
+                <p className="luxury-text">Promote users to admin role</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              <input
+                type="email"
+                value={promotionEmail}
+                onChange={(e) => setPromotionEmail(e.target.value)}
+                placeholder="Enter email to promote to admin..."
+                className="luxury-input flex-1"
+              />
+              <button
+                onClick={promoteToAdmin}
+                disabled={!promotionEmail}
+                className="btn-luxury-primary disabled:opacity-50"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                </svg>
+                Promote to Admin
+              </button>
+            </div>
+            
+            <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+              <p className="text-yellow-400 text-sm">
+                <strong>Note:</strong> If you're the first user in the system, you can promote yourself to admin. Otherwise, only existing admins can promote other users.
+              </p>
+            </div>
+          </div>
+
           {/* Recent Tickets Table */}
           <div className="luxury-glass rounded-3xl p-8 luxury-slide-up">
             <div className="flex items-center justify-between mb-8">
@@ -259,16 +370,33 @@ export default function Admin() {
                         </div>
                       </td>
                       <td className="py-4 px-6">
-                        <Link 
-                          to={`/tickets/${ticket._id}`}
-                          className="btn-luxury-secondary btn-sm"
-                        >
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                          View Details
-                        </Link>
+                        <div className="flex items-center space-x-2">
+                          {ticket.status !== 'in_progress' && ticket.status !== 'done' && (
+                            <button 
+                              onClick={() => updateTicketStatus(ticket._id, 'in_progress')}
+                              className="btn-luxury-secondary btn-sm bg-blue-600 hover:bg-blue-700"
+                              title="Start Progress"
+                            >
+                              ▶️
+                            </button>
+                          )}
+                          {ticket.status !== 'done' && (
+                            <button 
+                              onClick={() => updateTicketStatus(ticket._id, 'done')}
+                              className="btn-luxury-secondary btn-sm bg-green-600 hover:bg-green-700"
+                              title="Mark as Resolved"
+                            >
+                              ✅
+                            </button>
+                          )}
+                          <Link 
+                            to={`/tickets/${ticket._id}`}
+                            className="btn-luxury-secondary btn-sm"
+                            title="View Details"
+                          >
+                            👁️
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   ))}

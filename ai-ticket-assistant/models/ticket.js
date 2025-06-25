@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const ticketSchema = new mongoose.Schema({
   title: String,
   description: String,
-  status: { type: String, default: "TODO" },
+  status: { type: String, default: "todo", enum: ["todo", "in_progress", "done"] },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   assignedTo: {
     type: mongoose.Schema.Types.ObjectId,

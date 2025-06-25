@@ -36,6 +36,76 @@ export const createTicket = async (req, res) => {
   }
 };
 
+export const updateTicket = async (req, res) => {
+  try {
+    const { status, notes, assignedTo } = req.body;
+    const ticketId = req.params.id;
+    const user = req.user;
+
+    console.log("=== UPDATE TICKET DEBUG ===");
+    console.log("Ticket ID:", ticketId);
+    console.log("Update data:", { status, notes, assignedTo });
+    console.log("User role:", user.role);
+
+    // Only moderators and admins can update tickets
+    if (user.role === "user") {
+      return res.status(403).json({ message: "Forbidden: Users cannot update tickets" });
+    }
+
+    const ticket = await Ticket.findById(ticketId);
+    if (!ticket) {
+      return res.status(404).json({ message: "Ticket not found" });
+    }
+
+    console.log("Original ticket status:", ticket.status);
+
+    const updateData = {};
+    
+    if (status) {
+      updateData.status = status;
+      console.log("Setting new status to:", status);
+      
+      // If marking as resolved
+      if (status === "done") {
+        updateData.resolvedAt = new Date();
+        updateData.resolvedBy = user._id.toString();
+        console.log("Marking ticket as resolved");
+      }
+    }
+    
+    if (notes) {
+      updateData.helpfulNotes = notes;
+    }
+    
+    if (assignedTo) {
+      updateData.assignedTo = assignedTo;
+    }
+
+    console.log("Final update data:", updateData);
+
+    const updatedTicket = await Ticket.findByIdAndUpdate(
+      ticketId, 
+      updateData, 
+      { new: true }
+    ).populate("assignedTo", ["email", "_id"]);
+
+    console.log("Updated ticket status:", updatedTicket.status);
+
+    return res.status(200).json({
+      message: "Ticket updated successfully",
+      ticket: updatedTicket,
+      debug: {
+        originalStatus: ticket.status,
+        newStatus: updatedTicket.status,
+        updateData
+      }
+    });
+  } catch (error) {
+    console.error("Error updating ticket", error.message);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
 export const getTickets = async (req, res) => {
   try {
     const user = req.user;
@@ -63,20 +133,29 @@ export const getTicket = async (req, res) => {
     const user = req.user;
     let ticket;
 
+    console.log("=== GET TICKET DEBUG ===");
+    console.log("User role:", user.role);
+    console.log("Ticket ID:", req.params.id);
+    console.log("User ID:", user._id);
+
     if (user.role !== "user") {
+      console.log("User is admin/moderator - fetching any ticket");
       ticket = await Ticket.findById(req.params.id).populate("assignedTo", [
         "email",
         "_id",
       ]);
     } else {
+      console.log("User is regular user - fetching only their tickets");
       ticket = await Ticket.findOne({
         createdBy: user._id,
         _id: req.params.id,
       });
     }
 
+    console.log("Found ticket:", ticket ? "Yes" : "No");
+
     if (!ticket) {
-      return res.status(404).json({ message: "Ticket not found" });
+      return res.status(404).json({ message: "Ticket not found or access denied" });
     }
     
     return res.status(200).json({ ticket });
